@@ -1,4 +1,5 @@
 extern crate sdl2;
+use std::error::Error;
 use std::io::ErrorKind;
 
 use chiprs::Chip8;
@@ -6,12 +7,14 @@ use chiprs::Chip8;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 use std::env;
 use std::time::Duration;
 
 const INSTRUCTIONS_PER_SECOND: u32 = 700;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     let file_path = match &args[..] {
         [_, path] => path,
@@ -31,7 +34,6 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let mut emulator = Chip8::load_program(&program);
 
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -46,6 +48,8 @@ fn main() {
     canvas.set_draw_color(Color::BLACK);
     canvas.clear();
     canvas.present();
+
+    let mut emulator = Chip8::load_program(&program);
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -66,25 +70,31 @@ fn main() {
                     z x c v
                     */
                 => {
-                    todo!();
+                    eprintln!("Received event: {event:?}")
                 },
                 _ => {}
             }
         }
 
-        emulator.step();
-        canvas.set_draw_color(Color::BLACK);
-        canvas.clear();
-        canvas.set_draw_color(Color::WHITE);
-        for (y, row) in emulator.display.iter().enumerate() {
-            for (x, pixel) in row.iter().enumerate() {
-                if *pixel {
-                    let white_box = sdl2::rect::Rect::new(x as i32 * 10, y as i32 * 10, 10, 10);
-                    canvas.fill_rect(white_box).unwrap();
-                }
-            }
-        }
-        canvas.present();
+        emulator.step(None);
+        render(&emulator.display, &mut canvas)?;
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / INSTRUCTIONS_PER_SECOND));
     }
+    Ok(())
+}
+
+fn render(display: &[[bool; 64]; 32], canvas: &mut Canvas<Window>) -> Result<(), Box<dyn Error>>{
+    canvas.set_draw_color(Color::BLACK);
+    canvas.clear();
+    canvas.set_draw_color(Color::WHITE);
+    for (y, row) in display.iter().enumerate() {
+        for (x, pixel) in row.iter().enumerate() {
+            if *pixel {
+                let white_box = sdl2::rect::Rect::new(x as i32 * 10, y as i32 * 10, 10, 10);
+                canvas.fill_rect(white_box)?;
+            }
+        }
+    }
+    canvas.present();
+    Ok(())
 }
