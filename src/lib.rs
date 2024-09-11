@@ -35,7 +35,7 @@ pub enum DisplayState {
 
 impl Chip8 {
     /// Loads a program and returns an emulator instance.
-    /// A program consists of 16-bit instructions, but we require bytes.
+    /// A program consists of 16-bit instructions, but is provided as a byte array.
     pub fn load_program(program: &[u8]) -> Self {
         let mut memory = [0u8; 4096];
         if program.len() > memory.len() - 512 {
@@ -62,7 +62,8 @@ impl Chip8 {
         }
     }
 
-    pub fn step(&mut self, keypresses: [bool; 16]) -> DisplayState {
+    /// Given the set of keys that are currently pressed, execute the next program instruction and update the emulator state.
+    pub fn step(&mut self, pressed_keys: [bool; 16]) -> DisplayState {
         // fetch
         let first_byte = self.memory[self.pc as usize];
         let second_byte = self.memory[self.pc as usize + 1];
@@ -236,13 +237,13 @@ impl Chip8 {
                 match nn {
                     // Skip next instruction if key with the value of Vx is pressed.
                     0x9e => {
-                        if vx < 16 && keypresses[vx as usize] {
+                        if vx < 16 && pressed_keys[vx as usize] {
                             self.pc += 2;
                         }
                     }
                     // skips one instruction if the key corresponding to the value in VX is not pressed.
                     0xa1 => {
-                        if vx >= 16 || !keypresses[vx as usize] {
+                        if vx >= 16 || !pressed_keys[vx as usize] {
                             self.pc += 2;
                         }
                     }
@@ -266,12 +267,11 @@ impl Chip8 {
                             self.registers[0xf] = 1;
                         }
                     }
-                    // 0x1e => self.index_reg += self.registers[X] as u16,
                     // Wait for a key press, store the value of the key in Vx.
                     0x0a => {
                         // The easiest way to “wait” is to decrement the PC by 2 whenever a keypad value is not detected.
                         // This has the effect of running the same instruction repeatedly.
-                        match keypresses.iter().position(|&pressed| pressed) {
+                        match pressed_keys.iter().position(|&pressed| pressed) {
                             Some(idx) => self.registers[x] = idx as u8,
                             None => self.pc -= 2,
                         }
