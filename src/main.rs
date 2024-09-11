@@ -1,6 +1,7 @@
 extern crate sdl2;
 
 mod native_io;
+mod terminal_io;
 
 use std::error::Error;
 use std::io::ErrorKind;
@@ -8,12 +9,14 @@ use std::time::Duration;
 use std::{env, process};
 
 use chiprs::{Chip8, DisplayState};
-use native_io::NativeWindow;
+// use native_io::NativeWindow;
+use terminal_io::TerminalWindow;
 
 const INSTRUCTIONS_PER_SECOND: u32 = 720;
 const INSTRUCTIONS_PER_TIMER_TICK: u32 = 720 / 60;
 
 trait IODevice {
+    fn initialize() -> Self;
     /// Returns a bitset of the keys that are currently pressed.
     fn poll_input(&mut self) -> UserInput;
     fn render(&mut self, display: &[[bool; 64]; 32]) -> Result<(), Box<dyn Error>>;
@@ -47,7 +50,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             std::process::exit(1);
         }
     };
-    let mut io_device = NativeWindow::initialize();
+    // let mut io_device = NativeWindow::initialize();
+    let mut io_device = TerminalWindow::initialize();
     let mut emulator = Chip8::load_program(&program);
 
     let mut inst_count = 0;
