@@ -3,10 +3,10 @@ extern crate sdl2;
 mod native_io;
 mod terminal_io;
 
+use std::env;
 use std::error::Error;
 use std::io::ErrorKind;
 use std::time::Duration;
-use std::{env, process};
 
 use chiprs::{Chip8, DisplayState};
 // use native_io::NativeWindow;
@@ -30,24 +30,34 @@ enum UserInput {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // let mut stdout = io::stdout().into_raw_mode().unwrap();
+    // let mut stdin = termion::async_stdin();
+    // // stdout.write
+    // loop {
+    //     for key in stdin.by_ref().keys() {
+    //         write!(stdout, "{key:?}").unwrap();
+    //         stdout.flush().unwrap();
+    //     }
+    //     // write!(stdout, "finished loop\r\n").unwrap();
+    // }
     let args: Vec<String> = env::args().collect();
     let file_path = match &args[..] {
         [_, path] => path,
         _ => {
             eprintln!("USAGE: <script> <program.ch8>");
-            std::process::exit(1);
+            return Err("invalid usage".into());
         }
     };
 
     let program = match std::fs::read(file_path) {
         Ok(program) => program,
         Err(e) => {
-            match e.kind() {
-                ErrorKind::NotFound => eprintln!("{file_path} does not exist."),
-                ErrorKind::PermissionDenied => eprintln!("no read permissions for {file_path}"),
-                _ => eprintln!("Unexpected error: {e}"),
+            return Err(match e.kind() {
+                ErrorKind::NotFound => format!("{file_path} does not exist."),
+                ErrorKind::PermissionDenied => format!("no read permissions for {file_path}"),
+                _ => format!("{e}"),
             }
-            std::process::exit(1);
+            .into());
         }
     };
     // let mut io_device = NativeWindow::initialize();
@@ -57,9 +67,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut inst_count = 0;
     loop {
         let pressed_keys = match io_device.poll_input() {
-            UserInput::Exit => {
-                process::exit(0);
-            }
+            UserInput::Exit => return Ok(()),
             UserInput::PressedKeys(pressed_keys) => pressed_keys,
         };
         let display_state = emulator.step(pressed_keys);

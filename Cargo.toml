@@ -7,4 +7,7 @@ edition = "2021"
 
 [dependencies]
 sdl2 = { version = "0.37.0", features = ["bundled"] }
-rand = "*"
+rand = "0.8"
+ctrlc = "3.4"
+termion = "4.0"
+termios = "0.3"
