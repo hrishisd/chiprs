@@ -20,10 +20,8 @@ pub struct TerminalWindow {
     stdin: termion::AsyncReader,
 }
 
-impl TerminalWindow {}
-
-impl IODevice for TerminalWindow {
-    fn initialize() -> Self {
+impl TerminalWindow {
+    pub fn initialize() -> Self {
         let mut stdout = io::stdout()
             .into_raw_mode()
             .expect("Failed to switch terminal to raw mode");
@@ -35,7 +33,9 @@ impl IODevice for TerminalWindow {
             stdin: termion::async_stdin(),
         }
     }
+}
 
+impl IODevice for TerminalWindow {
     fn poll_input(&mut self) -> UserInput {
         let mut pressed_keys = [false; 16];
         for key in self.stdin.by_ref().keys() {

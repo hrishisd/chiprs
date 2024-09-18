@@ -19,8 +19,8 @@ pub struct NativeWindow {
     pressed_keys: [bool; 16],
 }
 
-impl IODevice for NativeWindow {
-    fn initialize() -> NativeWindow {
+impl NativeWindow {
+    pub fn initialize() -> NativeWindow {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
@@ -59,6 +59,9 @@ impl IODevice for NativeWindow {
             pressed_keys: [false; 16],
         }
     }
+}
+
+impl IODevice for NativeWindow {
     fn poll_input(&mut self) -> UserInput {
         /*
             Keyboard                    Chip-8
