@@ -13,8 +13,8 @@ use termion::raw::IntoRawMode;
 use crate::IODevice;
 use crate::UserInput;
 
-const WHITE_BLOCK: &str = "\x1b[38;5;214m█\x1b[0m";
-const BLACK_BLOCK: &str = "\x1b[38;5;0m█\x1b[0m";
+const OFF_COLOR_CODE: i32 = 232;
+const ON_COLOR_CODE: i32 = 214;
 
 pub struct TerminalWindow {
     /// The display state is None when uninitialized, before the first display state is received from the emulator
@@ -42,7 +42,6 @@ impl TerminalWindow {
 
 impl IODevice for TerminalWindow {
     fn poll_input(&mut self) -> UserInput {
-        let mut pressed_keys = [false; 16];
         for key in self.stdin.by_ref().keys() {
             match key {
                 Ok(Key::Esc) => return UserInput::Exit,
@@ -86,20 +85,8 @@ impl IODevice for TerminalWindow {
             return Ok(());
         }
 
-        let mut output = String::new();
-        // Hide the cursor before rendering
-        output.push_str("\x1b[?25l");
-        // Move the cursor to the top-left corner of the terminal
-        // "\x1b[H" is the escape sequence to move the cursor to (1,1)
-        output.push_str("\x1b[H");
-        // push screen contents
-        for row in display {
-            for pixel in row {
-                output.push_str(if *pixel { WHITE_BLOCK } else { BLACK_BLOCK });
-            }
-            output.push_str("\r\n");
-        }
-        write!(self.stdout, "{output}").unwrap();
+        let display_string = generate_display_string(*display);
+        write!(self.stdout, "{display_string}").unwrap();
         self.stdout.flush().unwrap();
         self.prev_display_state = Some(*display);
         Ok(())
@@ -116,4 +103,65 @@ impl Drop for TerminalWindow {
         write!(self.stdout, "\x1b[?25h").unwrap();
         self.stdout.flush().unwrap();
     }
+}
+
+// Generate a string, that when printed in raw mode, draws the display to the terminal window
+fn generate_display_string(display: [[bool; 64]; 32]) -> String {
+    let mut output = String::new();
+    // Hide the cursor before rendering
+    output.push_str("\x1b[?25l");
+    // Move the cursor to the top-left corner of the terminal
+    // "\x1b[H" is the escape sequence to move the cursor to (1,1)
+    output.push_str("\x1b[H");
+    let lower_half_block = '▄';
+    let upper_half_block = '▀';
+    let full_block = '█';
+    assert!(
+        display.len() % 2 == 0,
+        "Expected an even number of rows in the display, got {}",
+        display.len()
+    );
+    // set the background color
+    output.push_str(format!("\x1b[48;5;{}m", OFF_COLOR_CODE).as_str());
+    // set the foreground color
+    output.push_str(format!("\x1b[38;5;{}m", ON_COLOR_CODE).as_str());
+    for row_idx in (0..display.len()).step_by(2) {
+        for col_idx in 0..display[0].len() {
+            let top_pixel = display[row_idx][col_idx];
+            let bottom_pixel = display[row_idx + 1][col_idx];
+            if top_pixel && bottom_pixel {
+                output.push(full_block)
+            } else if top_pixel {
+                output.push(upper_half_block);
+            } else if bottom_pixel {
+                output.push(lower_half_block);
+            } else {
+                output.push(' ');
+            }
+        }
+        // Need to push a carriage return because \n does not set the cursor position to the beginning of the line in raw mode.
+        output.push_str("\r\n");
+    }
+    output
+}
+
+#[test]
+fn test_generate_display_string() {
+    let mut display = [[false; 64]; 32];
+    for row_idx in 0..32 {
+        for col_idx in 0..64 {
+            display[row_idx][col_idx] = match row_idx % 2 == 0 {
+                false => match col_idx % 4 {
+                    0 | 3 => true,
+                    _ => false,
+                },
+                true => match col_idx % 4 {
+                    1 | 3 => true,
+                    _ => false,
+                },
+            }
+        }
+    }
+    let display_str = generate_display_string(display);
+    print!("{display_str}");
 }
