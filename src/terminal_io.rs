@@ -2,6 +2,9 @@ use std::io;
 use std::io::Read;
 use std::io::Stdout;
 use std::io::Write;
+use std::time;
+use std::time::Duration;
+use std::time::Instant;
 
 use termion::event::Key;
 use termion::input::TermRead;
@@ -18,6 +21,7 @@ pub struct TerminalWindow {
     prev_display_state: Option<[[bool; 64]; 32]>,
     stdout: termion::raw::RawTerminal<Stdout>,
     stdin: termion::AsyncReader,
+    last_key_press_times: [Option<time::Instant>; 16],
 }
 
 impl TerminalWindow {
@@ -31,6 +35,7 @@ impl TerminalWindow {
             prev_display_state: None,
             stdout,
             stdin: termion::async_stdin(),
+            last_key_press_times: [None; 16],
         }
     }
 }
@@ -42,22 +47,22 @@ impl IODevice for TerminalWindow {
             match key {
                 Ok(Key::Esc) => return UserInput::Exit,
                 Ok(Key::Char(c)) => match c {
-                    '1' => pressed_keys[0x1] = true,
-                    '2' => pressed_keys[0x2] = true,
-                    '3' => pressed_keys[0x3] = true,
-                    '4' => pressed_keys[0xC] = true,
-                    'q' => pressed_keys[0x4] = true,
-                    'w' => pressed_keys[0x5] = true,
-                    'e' => pressed_keys[0x6] = true,
-                    'r' => pressed_keys[0xD] = true,
-                    'a' => pressed_keys[0x7] = true,
-                    's' => pressed_keys[0x8] = true,
-                    'd' => pressed_keys[0x9] = true,
-                    'f' => pressed_keys[0xE] = true,
-                    'z' => pressed_keys[0xA] = true,
-                    'x' => pressed_keys[0x0] = true,
-                    'c' => pressed_keys[0xB] = true,
-                    'v' => pressed_keys[0xF] = true,
+                    '1' => self.last_key_press_times[0x1] = Some(Instant::now()),
+                    '2' => self.last_key_press_times[0x2] = Some(Instant::now()),
+                    '3' => self.last_key_press_times[0x3] = Some(Instant::now()),
+                    '4' => self.last_key_press_times[0xC] = Some(Instant::now()),
+                    'q' => self.last_key_press_times[0x4] = Some(Instant::now()),
+                    'w' => self.last_key_press_times[0x5] = Some(Instant::now()),
+                    'e' => self.last_key_press_times[0x6] = Some(Instant::now()),
+                    'r' => self.last_key_press_times[0xD] = Some(Instant::now()),
+                    'a' => self.last_key_press_times[0x7] = Some(Instant::now()),
+                    's' => self.last_key_press_times[0x8] = Some(Instant::now()),
+                    'd' => self.last_key_press_times[0x9] = Some(Instant::now()),
+                    'f' => self.last_key_press_times[0xE] = Some(Instant::now()),
+                    'z' => self.last_key_press_times[0xA] = Some(Instant::now()),
+                    'x' => self.last_key_press_times[0x0] = Some(Instant::now()),
+                    'c' => self.last_key_press_times[0xB] = Some(Instant::now()),
+                    'v' => self.last_key_press_times[0xF] = Some(Instant::now()),
                     _ => {}
                 },
                 Ok(Key::Ctrl('c')) => {
@@ -68,6 +73,11 @@ impl IODevice for TerminalWindow {
             }
         }
 
+        let now = Instant::now();
+        let pressed_keys = self.last_key_press_times.map(|t| match t {
+            Some(t) => now - t < Duration::from_millis(50),
+            None => false,
+        });
         UserInput::PressedKeys(pressed_keys)
     }
 

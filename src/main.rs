@@ -15,8 +15,8 @@ use chiprs::{Chip8, DisplayState};
 use native_io::NativeWindow;
 use terminal_io::TerminalWindow;
 
-const FRAMES_PER_SECOND: u32 = 60;
-const INSTRUCTIONS_PER_FRAME: u32 = 100;
+const FRAMES_PER_SECOND: u32 = 120;
+const INSTRUCTIONS_PER_FRAME: u32 = 10;
 
 trait IODevice {
     // fn initialize() -> Self;
