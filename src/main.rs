@@ -6,6 +6,7 @@ mod terminal_io;
 use std::error::Error;
 use std::io::ErrorKind;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -19,7 +20,6 @@ const FRAMES_PER_SECOND: u32 = 120;
 const INSTRUCTIONS_PER_FRAME: u32 = 10;
 
 trait IODevice {
-    // fn initialize() -> Self;
     /// Returns a bitset of the keys that are currently pressed.
     fn poll_input(&mut self) -> UserInput;
     fn render(&mut self, display: &[[bool; 64]; 32]) -> Result<(), Box<dyn Error>>;

@@ -9,6 +9,7 @@ use std::time::Instant;
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
+use termion::screen::IntoAlternateScreen;
 
 use crate::IODevice;
 use crate::UserInput;
@@ -19,7 +20,7 @@ const ON_COLOR_CODE: i32 = 214;
 pub struct TerminalWindow {
     /// The display state is None when uninitialized, before the first display state is received from the emulator
     prev_display_state: Option<[[bool; 64]; 32]>,
-    stdout: termion::raw::RawTerminal<Stdout>,
+    stdout: termion::screen::AlternateScreen<termion::raw::RawTerminal<Stdout>>,
     stdin: termion::AsyncReader,
     last_key_press_times: [Option<time::Instant>; 16],
 }
@@ -28,7 +29,9 @@ impl TerminalWindow {
     pub fn initialize() -> Self {
         let mut stdout = io::stdout()
             .into_raw_mode()
-            .expect("Failed to switch terminal to raw mode");
+            .expect("Failed to switch terminal to raw mode")
+            .into_alternate_screen()
+            .expect("Failed to switch to alternate screen buffer");
         write!(stdout, "{esc}[2J{esc}[1;1H", esc = 27 as char).unwrap();
         stdout.flush().unwrap();
         TerminalWindow {
